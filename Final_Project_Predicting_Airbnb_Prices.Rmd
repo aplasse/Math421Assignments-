@@ -1,0 +1,444 @@
+---
+title: 'Final Project: Predicting Airbnb Prices'
+author: "Anthony Plasse"
+date: "December 10, 2018"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+
+## Bringing in the data
+
+```{r, echo=TRUE} 
+train <- read.csv('C:/Users/student/Desktop/train.csv', header = TRUE)
+str(train)
+```
+
+##Showing Target Variable (Price)
+```{r, echo = TRUE}
+library(ggplot2)
+print(ggplot(train) + geom_density(mapping = aes(x= exp(train$log_price))))
+```
+
+##Mean of Target
+```{r, echo = TRUE}
+train$log_price = exp(train$log_price)
+
+mean(train$log_price)
+```
+
+##Making the Target a 2-level Factor
+-Switched log_price from a numeric to factor
+-Split the variable at the mean:
+ - "<160"
+ - ">160"
+```{r}
+replacer <- function(x)
+{ replace(x, c(x<= 160), c("<160")) }
+
+replacer2 <- function(x)
+{replace(x, c(x> 160), c(">160"))}
+
+train$log_price <- sapply(train$log_price,replacer)
+train$log_price <- sapply(train$log_price,replacer2)
+
+train$log_price <- as.factor(train$log_price)
+levels(train$log_price) <- c("<160", ">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160",">160","<160")
+table(train$log_price)
+```
+
+## Disposing Excess Variables, Recoding levels
+-Took out many variables including:
+
+-Last review date, id#, thumbnail URL, host since, cancellation policy, description, neighbourhood, name, first review, zipcode, latitude, longitude, and amenities(too many levels)
+
+-Cut down the levels of categorical variables including:
+
+-host response rate (100, not 100), bed type (bed, not a bed), property type (house, apartment, other), identity verified (T/F), profile pic of host (T/F), instant bookable(T/F)
+```{r}
+
+train$last_review = NULL
+train$id = NULL
+train$thumbnail_url = NULL
+train$host_since = NULL
+train$cancellation_policy = NULL
+train$description = NULL
+train$neighbourhood = NULL
+train$name= NULL
+train$first_review = NULL
+train$zipcode = NULL
+train$latitude = NULL
+train$longitude = NULL
+train$amenities = NULL
+
+levels(train$bed_type) <- c("Not a bed", "Not a bed", "Not a bed", "Not a bed", "Bed")
+
+
+levels(train$host_response_rate) <- c(NA   ,  "Not 100"  , "Not 100",  "100", "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100", "Not 100",  "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100"  , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" , "Not 100" , "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100",  "Not 100" ,
+  "Not 100" )
+ 
+
+levels(train$property_type) <- c("Apartment","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","House","Other","House","Other","Other","Other","Other","Other","Other","Other","Apartment","Other","Other","Other","House","Other","Other","House","Other","Other")
+
+levels(train$host_identity_verified) <- c(NA, "F", "T")
+
+levels(train$host_has_profile_pic) <- c(NA, "F", "T")
+
+levels(train$instant_bookable) <- c("F", "T")
+```
+
+
+## Graphs
+- Showing the distribution of the target variable
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$log_price)))
+```
+
+## Graphs
+- Property type follows the same trends in both sides
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$log_price, fill = train$property_type)))
+```
+
+##Graphs
+-Most of >160 is "entire home/apt"
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$log_price, fill = train$room_type)))
+```
+
+##Graphs
+-We can see that there are 10 bed listings for <160
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$log_price, fill = as.factor(train$beds))))
+```
+
+##Closer look
+-Little relationship b/w # of beds and price
+```{r, echo = TRUE}
+trainbeds <- subset(train, train$beds >= 5)
+print(ggplot(trainbeds) + geom_bar(mapping = aes(x= trainbeds$log_price, fill = as.factor(trainbeds$beds))))
+```
+
+##Graphs
+-A very big portion of the listings for <160 are 1 bedroom.
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$log_price, fill = as.factor(train$bedrooms))))
+```
+
+##Graphs
+-probability of <160 very close to that of >160 at beds=2
+```{r, echo= TRUE}
+print(ggplot(train) + geom_density(mapping = aes(x= train$beds, fill = train$log_price, alpha = .5)))
+```
+
+##Graphs
+-Almost everyone has a profile picture, no matter identity
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x= train$host_identity_verified, fill = train$host_has_profile_pic)))
+```
+
+##Graphs
+-Probably <160 for 1 bedroom, probably >160 for 2 bedrooms
+```{r, echo = TRUE}
+print(ggplot(train) + geom_density(mapping = aes(x= train$bedrooms, fill = train$log_price, alpha = .5)))
+```
+
+##Graphs
+-No relation between number of reviews to pricing.
+```{r, echo = TRUE}
+print(ggplot(train) + geom_density(mapping = aes(x= train$number_of_reviews, fill = train$log_price, alpha = .5)))
+```
+
+##Graphs
+-As for Boston and San Fran, more likely to pay >160
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x = train$city, fill = train$log_price)))
+```
+
+##Graphs
+-Over 100 reviews, score rating >= 70
+```{r, echo = TRUE}
+library(hexbin)
+print(ggplot(train) + geom_hex(mapping = aes(x = train$number_of_reviews, y = train$review_scores_rating)))
+```
+
+##Graphs
+-You can see some zero bedroom listings with 15 beds
+```{r, echo = TRUE}
+print(ggplot(train) + geom_hex(mapping = aes(x = train$bedrooms, y = train$beds)))
+```
+
+##Graphs
+-If you have a 100 response rate, more reviews will lead to higher score
+```{r, echo = TRUE}
+print(ggplot(train) + geom_point(mapping = aes(x = train$number_of_reviews, y = train$review_scores_rating)) + facet_wrap(~ train$host_response_rate))
+```
+
+##Graphs
+```{r, echo = TRUE}
+print(ggplot(train) + geom_bar(mapping = aes(x = train$room_type, fill = train$property_type)) + facet_wrap(~ train$log_price))
+```
+
+##Notes
+-I expected to see less "entire home/apt" listings for the <160 chart
+
+-I also expected to see less apartments for the "entire home/apt"" listings at the >160 level.
+
+## Clean dataset of NA's (mean and mode)
+```{r}
+
+ most_frequent <- function(x){
+    unique_x <- unique(x)
+    unique_x[which.max(tabulate(match(x, unique_x)))]
+ }
+ 
+ data_cleaning <- function(data)
+ {
+   for (i in which(sapply(data, is.numeric))){
+        data[is.na(data[,i]), i] <- mean(data[,i], na.rm = TRUE)
+   } 
+   for (i in which(sapply(data, is.factor))){
+         data[is.na(data[,i]), i] <- most_frequent(data[,i])
+     }
+   invisible(return(data))
+ }
+ 
+train.clean1 <- data_cleaning(train)
+sum(is.na(train.clean1))
+
+```
+
+## Clean dataset of NA's (knnImpute)
+```{r}
+train1 <- train
+
+library(caret)
+library(stats)
+
+preProcess_missingdata_modeltrain <- preProcess(train, method='knnImpute')
+
+## train.clean2 <- predict(preProcess_missingdata_modeltrain, newdata = train)
+
+#str(train.clean2)
+#sum(is.na(train.clean2))
+
+```
+
+## Clean dataset of NA's (removing rows with missing data)
+```{r}
+train2 <- train
+train.clean3 <- na.omit(train2)
+sum(is.na(train.clean3))
+```
+
+## Split the data 
+-Partitioning the data
+```{r, echo = TRUE}
+library(caret)
+splitIndex <- createDataPartition(train.clean1$log_price, p = .70, list = FALSE, times = 1)
+training <- train.clean1[ splitIndex,]
+test <- train.clean1[-splitIndex,]
+
+splitIndex2 <- createDataPartition(train.clean3$log_price, p = .70, list = FALSE, times = 1)
+training2 <- train.clean3[ splitIndex2,]
+test2 <- train.clean3[-splitIndex2,]
+```
+
+## Recoding categoical variables
+-Recoded categorical variables with dummyVars
+```{r}
+dummies_model <- dummyVars(log_price ~ ., data=train.clean1)
+trainData_mat <- predict(dummies_model, newdata = train.clean1)
+
+trainData <- data.frame(trainData_mat)
+trainData$log_price <- train.clean1$log_price
+
+
+
+dummies_model2 <- dummyVars(log_price ~ ., data=train.clean3)
+trainData_mat2 <- predict(dummies_model2, newdata = train.clean3)
+
+trainData2 <- data.frame(trainData_mat2)
+trainData2$log_price <- train.clean3$log_price
+
+
+```
+
+
+##Caret model (training1 - No dummVars)
+```{r}
+model <- train(log_price~.,data =training, method = "rpart")
+pred=predict(model,test)
+
+cm=confusionMatrix(pred, test$log_price, positive=">160")
+```
+
+##Results
+```{r, echo = TRUE}
+cm$overall[1]
+cm$byClass[11]
+```
+
+##Caret model (training2- no dummyVars)
+```{r}
+model2 <- train(log_price~.,data =training2, method = "rpart")
+pred2=predict(model2,test2)
+
+cm2=confusionMatrix(pred2, test2$log_price, positive=">160")
+```
+
+##Results
+```{r, echo = TRUE}
+cm2$overall[1]
+cm2$byClass[11]
+```
+
+##Testing Caret Models w. Dummy variables
+```{r}
+library(caret)
+splitIndex3 <- createDataPartition(trainData$log_price, p = .70, list = FALSE, times = 1)
+training11 <- trainData[ splitIndex3,]
+test11 <- trainData[-splitIndex3,]
+
+splitIndex4<- createDataPartition(trainData2$log_price, p = .70, list = FALSE, times = 1)
+training22 <- trainData2[ splitIndex4,]
+test22 <- trainData2[-splitIndex4,]
+
+model11 <- train(log_price~.,data =training11, method = "rpart")
+pred11=predict(model11,test11)
+
+cm11=confusionMatrix(pred11, test11$log_price, positive=">160")
+
+model22 <- train(log_price~.,data =training22, method = "rpart")
+pred22=predict(model22,test22)
+
+cm22=confusionMatrix(pred22, test22$log_price, positive=">160")
+
+```
+
+##Results (mean/mode w/ dummyVars)
+```{r}
+cm11$overall[1]
+cm11$byClass[11]
+```
+
+##Results (na.omit w/ dummyVars)
+```{r}
+cm22$overall[1]
+cm22$byClass[11]
+```
+
+## Build Ranger Random Forest (training11)
+```{r}
+library(ranger)
+model3 = ranger(log_price ~., data = training11)
+pred3  = predict(model3, data = test11)$predictions
+cm3=confusionMatrix(pred3, test11$log_price, positive=">160")
+```
+
+## Results (Ranger random forest w/ dummyVars w/ mean.mode)
+```{r, echo = TRUE}
+cm3$overall[1]
+cm3$byClass[11]
+```
+
+## Build Ranger Random Forest (training22)
+```{r}
+model4 = ranger(log_price ~., data = training22)
+pred4  = predict(model4, data = test22)$predictions
+cm4=confusionMatrix(pred4, test22$log_price, positive=">160")
+```
+
+##Results (Ranger Random Forest w/ dummyVars w/ na.omit)
+```{r, echo= TRUE}
+cm4$overall[1]
+cm4$byClass[11]
+```
+
+
+#3 Cross Validation with Ranger (training11)
+```{r}
+
+model5 <- train(log_price~.,data = training11, method = "ranger", 
+               trControl = trainControl(method ="cv", number = 3, verboseIter = TRUE))
+
+pred5 = predict(model5, newdata = test11)
+cm5=confusionMatrix(pred5, test11$log_price, positive=">160")
+```
+
+## Results (3 fold cross validating w/ ranger; dummyVars and mean.mode)
+```{r, echo = TRUE}
+plot(model5)
+cm5$overall[1]
+cm5$byClass[11]
+```
+
+## Cross Validation with Ranger (training22)
+```{r}
+model6 <- train(log_price~.,data = training22, method = "ranger", 
+               trControl = trainControl(method ="cv", number = 3, verboseIter = TRUE))
+
+pred6  = predict(model6, newdata = test22)
+cm6=confusionMatrix(pred6, test22$log_price, positive=">160")
+```
+
+##Results (3 fold cross validating w/ ranger; dummyVars and na.omit)
+```{r, echo = TRUE}
+plot(model6)
+cm6$overall[1]
+cm6$byClass[11]
+```
+
+#Tuned Models (training11)
+```{r}
+myGrid = expand.grid(mtry = c(1:4), splitrule = c("gini","extratrees"),
+                     min.node.size = c(1:3))
+
+model7 <- train(log_price~.,data = training11, method = "ranger", 
+               trControl = trainControl(method ="cv", number = 3, verboseIter = TRUE),
+               tuneGrid = myGrid)
+pred7<- predict(model7, newdata = test11)
+cm7 <- confusionMatrix(pred7, test11$log_price, positive=">160")
+```
+
+##Results (Tuned models of dummyVars w/ mean/mode)
+```{r, echo = TRUE}
+plot(model7)
+cm7$overall[1]
+cm7$byClass[11]
+```
+
+
+##Tuned Models (training2)
+```{r}
+myGrid = expand.grid(mtry = c(1:4), splitrule = c("gini","extratrees"),
+                     min.node.size = c(1:3))
+
+model8 <- train(log_price~.,data = training22, method = "ranger", 
+               trControl = trainControl(method ="cv", number = 3, verboseIter = TRUE),
+               tuneGrid = myGrid)
+pred8 <- predict(model8, newdata = test22)
+cm8 <- confusionMatrix(pred8, test22$log_price, positive=">160")
+```
+
+##Results (Tuned model of dummyVars w/ na.omit)
+```{r, echo = TRUE}
+plot(model8)
+cm8$overall[1]
+cm8$byClass[11]
+```
